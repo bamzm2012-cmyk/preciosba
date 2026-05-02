@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PreciosBA — Comparador de Supermercados</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00e5a0;
+    --accent2: #ff6b35;
+    --accent3: #7c6af7;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  header {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.93);
+    backdrop-filter: blur(14px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.4; transform:scale(.75); }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  .status-dot span {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .status-dot.online span { background: var(--accent); }
+  .status-dot.online { color: var(--accent); }
+
+  main {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 36px 24px;
+  }
+
+  .hero {
+    margin-bottom: 36px;
+    animation: fadeUp .5s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.9rem, 4.5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    margin-bottom: 8px;
+  }
+
+  .hero h1 span { color: var(--accent); }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── SEARCH ── */
+  .search-section {
+    margin-bottom: 36px;
+    animation: fadeUp .5s ease .08s both;
+  }
+
+  .search-wrapper {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .search-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 15px 18px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.92rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 9px;
+    padding: 14px 24px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.86rem;
+    letter-spacing: .04em;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: #00ffc0; transform: translateY(-1px); }
+  .btn:active { transform: none; }
+  .btn:disabled { opacity: .5; cursor: default; transform: none; }
+
+  .search-hint { font-size: .7rem; color: var(--muted); letter-spacing: .04em; }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 22px;
+    animation: fadeUp .5s ease .15s both;
+  }
+
+  @media (max-width: 780px) { .layout { grid-template-columns: 1fr; } }
+
+  /* ── RESULTS ── */
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .82rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .results-count { font-size: .7rem; color: var(--muted); }
+
+  /* ── PRODUCT CARD ── */
+  .product-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    transition: all .18s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  .product-card:hover { border-color: rgba(0,229,160,.28); transform: translateX(3px); }
+  .product-card:hover::before { opacity: 1; }
+  .product-card.tracked { border-color: rgba(0,229,160,.35); background: rgba(0,229,160,.03); }
+  .product-card.tracked::before { opacity: 1; }
+
+  .product-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: .9rem;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .product-meta {
+    font-size: .7rem;
+    color: var(--muted);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Price chips */
+  .prices-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 12px;
+  }
+
+  .price-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: .78rem;
+  }
+
+  .chain-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  .price-value { font-family:'Syne',sans-serif; font-weight:700; }
+  .price-promo { color:var(--accent); font-size:.63rem; letter-spacing:.06em; }
+  .price-best { color:var(--accent); }
+
+  /* Comparison bars */
+  .comparison { margin-bottom: 10px; }
+
+  .cmp-label {
+    font-size: .63rem;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .cmp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .cmp-name { font-size:.68rem; width:66px; color:var(--muted); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .cmp-bar-wrap { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .cmp-bar { height:100%; border-radius:2px; transition: width .45s ease; }
+
+  .cmp-price {
+    font-family:'Syne',sans-serif;
+    font-size:.78rem;
+    font-weight:700;
+    width:76px;
+    text-align:right;
+    flex-shrink:0;
+  }
+
+  .cmp-tick { color:var(--accent); margin-left:3px; font-size:.65rem; }
+
+  /* Card footer */
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  .expand-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    cursor: pointer;
+    letter-spacing: .05em;
+    padding: 2px 0;
+    transition: color .15s;
+  }
+
+  .expand-btn:hover { color: var(--text); }
+
+  .track-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    cursor: pointer;
+    transition: all .18s;
+    letter-spacing: .05em;
+  }
+
+  .track-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .track-btn.active { background:rgba(0,229,160,.1); border-color:var(--accent); color:var(--accent); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { position:sticky; top:80px; align-self:start; }
+
+  .sidebar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .sidebar-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: .92rem;
+    letter-spacing: -.02em;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    background: var(--accent);
+    color: #000;
+    border-radius: 100px;
+    padding: 1px 8px;
+    font-size: .68rem;
+    font-weight: 700;
+  }
+
+  .sidebar-sub { font-size:.7rem; color:var(--muted); margin-bottom:18px; }
+
+  .tracked-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeIn .25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity:0; transform:translateY(-5px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  .tracked-item:last-child { border-bottom: none; }
+
+  .tracked-info { flex:1; min-width:0; }
+  .tracked-name { font-size:.8rem; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tracked-sub { font-size:.65rem; color:var(--muted); margin-top:2px; }
+
+  .tracked-price {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .84rem;
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.05rem;
+    line-height: 1;
+    padding: 0 2px;
+    transition: color .15s;
+    flex-shrink: 0;
+  }
+
+  .remove-btn:hover { color: var(--accent2); }
+
+  .chain-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .legend-item { display:flex; align-items:center; gap:4px; font-size:.65rem; color:var(--muted); }
+
+  .last-updated { font-size:.65rem; color:var(--muted); margin-top:10px; letter-spacing:.04em; }
+
+  /* ── STATES ── */
+  .empty-state {
+    text-align:center;
+    padding:40px 20px;
+    color:var(--muted);
+    font-size:.8rem;
+    line-height:2;
+  }
+
+  .empty-icon { font-size:2rem; display:block; margin-bottom:10px; opacity:.4; }
+
+  .loading {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:24px 4px;
+    color:var(--muted);
+    font-size:.8rem;
+  }
+
+  .spinner {
+    width:16px; height:16px;
+    border:2px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin .75s linear infinite;
+    flex-shrink:0;
+  }
+
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .error-msg {
+    background:rgba(255,107,53,.07);
+    border:1px solid rgba(255,107,53,.3);
+    border-radius:8px;
+    padding:12px 15px;
+    font-size:.78rem;
+    color:var(--accent2);
+    line-height:1.6;
+  }
+
+  /* ── SETUP BANNER ── */
+  .setup-banner {
+    background: linear-gradient(135deg, rgba(124,106,247,.12), rgba(0,229,160,.08));
+    border: 1px solid rgba(124,106,247,.3);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 28px;
+    font-size: .78rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .setup-banner strong { color: var(--accent3); }
+  .setup-banner code {
+    background: rgba(255,255,255,.07);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: .85em;
+    color: var(--accent);
+  }
+
+  footer {
+    text-align:center;
+    padding:40px 20px 60px;
+    color:var(--muted);
+    font-size:.68rem;
+    letter-spacing:.07em;
+    line-height:1.9;
+  }
+
+  footer a { color:var(--muted); text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    PreciosBA
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="statusDot">
+      <span></span>
+      <span id="statusText">Verificando...</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Compará precios<br>en <span>tiempo real</span></h1>
+    <p>Coto · Jumbo · Día · Carrefour · Walmart · y más — Buenos Aires</p>
+  </div>
+
+  <!-- Setup banner — se oculta cuando el backend está conectado -->
+  <div class="setup-banner" id="setupBanner">
+    <strong>⚙ Configuración pendiente:</strong> El backend no está conectado todavía.<br>
+    Seguí la guía de instalación para ver precios reales. 
+    Por ahora se muestran datos de <strong>demo</strong> para que veas cómo funciona la app.<br>
+    Una vez configurado, cambiá <code>BACKEND_URL</code> en este archivo al link de tu servidor Render.
+  </div>
+
+  <div class="search-section">
+    <div class="search-wrapper">
+      <input
+        type="text"
+        class="search-input"
+        id="searchInput"
+        placeholder="Buscar... ej: leche entera, arroz largo, yerba mate"
+        autocomplete="off"
+      >
+      <button class="btn" id="searchBtn" onclick="buscarProducto()">Buscar</button>
+    </div>
+    <div class="search-hint">
+      70.000+ productos · Fuente: SEPA / Precios Claros, Secretaría de Comercio Argentina
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Results -->
+    <div>
+      <div class="results-header">
+        <span class="results-title" id="resultsTitle">Resultados</span>
+        <span class="results-count" id="resultsCount"></span>
+      </div>
+      <div id="resultsContainer">
+        <div class="empty-state">
+          <span class="empty-icon">🔍</span>
+          Buscá cualquier producto<br>y compará precios al instante
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-card">
+        <div class="sidebar-title">
+          Seguimiento
+          <span class="badge" id="trackedCount">0</span>
+        </div>
+        <div class="sidebar-sub">Productos que estás siguiendo</div>
+        <div id="trackedList">
+          <div class="empty-state" style="padding:16px 0">
+            <span class="empty-icon" style="font-size:1.4rem">📌</span>
+            Agregá productos<br>con el botón Seguir
+          </div>
+        </div>
+        <div class="chain-legend">
+          <div class="legend-item"><span class="chain-dot" style="background:#e8201a"></span>Coto</div>
+          <div class="legend-item"><span class="chain-dot" style="background:#00a650"></span>Jumbo</div>
+          <div class="legend-item"><span class="chain-dot" style="background:#ee2222"></span>Día</div>
+          <div class="legend-item"><span class="chain-dot" style="background:#003899"></span>Carrefour</div>
+          <div class="legend-item"><span class="chain-dot" style="background:#0071ce"></span>Walmart</div>
+        </div>
+        <div class="last-updated" id="lastUpdated"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Datos del SEPA · Secretaría de Comercio · República Argentina<br>
+  <a href="https://www.preciosclaros.gob.ar" target="_blank">preciosclaros.gob.ar</a>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════
+// ⚙ CONFIGURACIÓN — cambiá esta URL cuando tengas el backend en Render
+// ══════════════════════════════════════════════════
+const BACKEND_URL = 'https://precios-backend.onrender.com'; // ← CAMBIÁ ESTO
+
+// ══════════════════════════════════════════════════
+// CHAINS
+// ══════════════════════════════════════════════════
+const CHAINS = {
+  'COTO':       { color: '#e8201a', name: 'Coto' },
+  'JUMBO':      { color: '#00a650', name: 'Jumbo' },
+  'CARREFOUR':  { color: '#003899', name: 'Carrefour' },
+  'DIA':        { color: '#ee2222', name: 'Día' },
+  'WALMART':    { color: '#0071ce', name: 'Walmart' },
+  'LA ANONIMA': { color: '#f5a623', name: 'La Anónima' },
+  'DISCO':      { color: '#9b59b6', name: 'Disco' },
+  'VEA':        { color: '#e67e22', name: 'Vea' },
+};
+
+function getChain(raw) {
+  if (!raw) return { color: '#6b6b8a', name: 'Otro' };
+  const u = raw.toUpperCase();
+  for (const [k, v] of Object.entries(CHAINS)) if (u.includes(k)) return v;
+  return { color: '#6b6b8a', name: raw };
+}
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let tracked = JSON.parse(localStorage.getItem('pba_tracked') || '[]');
+let backendOnline = false;
+
+// ══════════════════════════════════════════════════
+// DEMO DATA (fallback)
+// ══════════════════════════════════════════════════
+const DEMO_PRODUCTS = [
+  { id:'111', nombre:'Leche Entera La Serenísima', marca:'LA SERENÍSIMA', presentacion:'1L', _demo:true },
+  { id:'222', nombre:'Leche Descremada Sancor', marca:'SANCOR', presentacion:'1L', _demo:true },
+  { id:'333', nombre:'Arroz Largo Fino Gallo', marca:'GALLO', presentacion:'500g', _demo:true },
+  { id:'444', nombre:'Yerba Mate Taragüí', marca:'TARAGÜÍ', presentacion:'500g', _demo:true },
+  { id:'555', nombre:'Aceite de Girasol Cocinero', marca:'COCINERO', presentacion:'1.5L', _demo:true },
+  { id:'666', nombre:'Fideos Spaghetti Matarazzo', marca:'MATARAZZO', presentacion:'500g', _demo:true },
+  { id:'777', nombre:'Harina 000 Cañuelas', marca:'CAÑUELAS', presentacion:'1kg', _demo:true },
+  { id:'888', nombre:'Azúcar Ledesma', marca:'LEDESMA', presentacion:'1kg', _demo:true },
+  { id:'999', nombre:'Pan Lactal Bimbo', marca:'BIMBO', presentacion:'500g', _demo:true },
+  { id:'000', nombre:'Mayonesa Hellmann\'s', marca:'HELLMANN\'S', presentacion:'250g', _demo:true },
+];
+
+const DEMO_CHAINS = ['COTO','JUMBO','DIA','CARREFOUR','WALMART'];
+
+function demoPrices(id) {
+  const base = 500 + ((parseInt(id)||1) * 317 % 4000);
+  return DEMO_CHAINS.map(c => ({
+    banderaDescripcion: c,
+    precio: base + Math.floor(Math.sin(parseInt(id||0) + c.charCodeAt(0)) * 400),
+    precioPromo1: Math.random() > 0.65 ? Math.floor((base * 0.87)) : null
+  })).filter(s => s.precio > 0);
+}
+
+function filterDemo(q) {
+  const ql = q.toLowerCase();
+  return DEMO_PRODUCTS.filter(p =>
+    p.nombre.toLowerCase().includes(ql) ||
+    p.marca.toLowerCase().includes(ql)
+  );
+}
+
+// ══════════════════════════════════════════════════
+// API / BACKEND
+// ══════════════════════════════════════════════════
+async function checkBackend() {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  try {
+    const r = await fetch(BACKEND_URL + '/', { signal: AbortSignal.timeout(4000) });
+    if (r.ok) {
+      backendOnline = true;
+      dot.className = 'status-dot online';
+      txt.textContent = 'Conectado';
+      document.getElementById('setupBanner').style.display = 'none';
+    } else throw new Error();
+  } catch {
+    backendOnline = false;
+    dot.className = 'status-dot';
+    txt.textContent = 'Demo mode';
+  }
+}
+
+async function apiBuscar(q) {
+  const r = await fetch(`${BACKEND_URL}/api/productos?q=${encodeURIComponent(q)}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function apiPrecios(id) {
+  const r = await fetch(`${BACKEND_URL}/api/producto/${id}`);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ══════════════════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════════════════
+async function buscarProducto() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (q.length < 2) return;
+
+  const container = document.getElementById('resultsContainer');
+  const titleEl   = document.getElementById('resultsTitle');
+  const countEl   = document.getElementById('resultsCount');
+  const btn       = document.getElementById('searchBtn');
+
+  btn.disabled = true;
+  titleEl.textContent = `Buscando "${q}"…`;
+  countEl.textContent = '';
+  container.innerHTML = '<div class="loading"><div class="spinner"></div>Consultando Precios Claros…</div>';
+
+  let productos = [];
+  let isDemo = false;
+
+  try {
+    if (backendOnline) {
+      productos = await apiBuscar(q);
+      if (!productos.length) throw new Error('empty');
+    } else throw new Error('offline');
+  } catch {
+    productos = filterDemo(q);
+    if (!productos.length) productos = DEMO_PRODUCTS.slice(0, 5);
+    isDemo = true;
+  }
+
+  container.innerHTML = '';
+
+  if (isDemo) {
+    container.innerHTML = `<div class="setup-banner" style="margin-bottom:14px">
+      📦 <strong>Demo:</strong> Configurá el backend para ver precios reales.
+    </div>`;
+  }
+
+  titleEl.textContent = `"${q}"`;
+  countEl.textContent = `${productos.length} producto${productos.length !== 1 ? 's' : ''}`;
+
+  for (const p of productos) {
+    // Fetch prices (real or demo)
+    let sucursales = p.sucursales || [];
+    if (!sucursales.length && backendOnline && !isDemo) {
+      try { sucursales = await apiPrecios(p.id || p.ean || ''); } catch {}
+    }
+    if (!sucursales.length) sucursales = demoPrices(p.id || '1');
+
+    container.appendChild(buildCard(p, sucursales));
+  }
+
+  updateTime();
+  btn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════
+// CARD BUILDER
+// ══════════════════════════════════════════════════
+function buildCard(p, sucursales) {
+  const card = document.createElement('div');
+  card.className = 'product-card';
+
+  const id = p.id || p.ean || '';
+  const isTracked = tracked.some(t => t.id === id);
+  if (isTracked) card.classList.add('tracked');
+
+  // Group by chain, best price
+  const byChain = {};
+  for (const s of sucursales) {
+    const cname = s.banderaDescripcion || s.bandera || 'Otro';
+    const ef = s.precioPromo1 || s.precio || 0;
+    if (ef > 0 && (!byChain[cname] || ef < byChain[cname].ef)) {
+      byChain[cname] = { ef, precio: s.precio, promo: s.precioPromo1, raw: s };
+    }
+  }
+
+  const sorted = Object.entries(byChain).sort((a,b) => a[1].ef - b[1].ef);
+  const minEf  = sorted.length ? sorted[0][1].ef : 0;
+  const maxEf  = sorted.length ? sorted[sorted.length-1][1].ef : 0;
+
+  // Chips (top 4)
+  const chips = sorted.slice(0,4).map(([c, d]) => {
+    const ci = getChain(c);
+    const isBest = d.ef === minEf && sorted.length > 1;
+    return `<div class="price-chip">
+      <span class="chain-dot" style="background:${ci.color}"></span>
+      <span>${ci.name}</span>
+      <span class="price-value ${isBest ? 'price-best' : ''}">$${fmt(d.ef)}</span>
+      ${d.promo ? '<span class="price-promo">PROMO</span>' : ''}
+    </div>`;
+  }).join('');
+
+  // Comparison bars
+  const uid = 'cmp' + Math.random().toString(36).slice(2,7);
+  const bars = sorted.map(([c, d]) => {
+    const ci = getChain(c);
+    const isBest = d.ef === minEf && sorted.length > 1;
+    const pct = maxEf > minEf ? ((d.ef - minEf) / (maxEf - minEf)) * 80 + 20 : 60;
+    return `<div class="cmp-row">
+      <span class="cmp-name">${ci.name}</span>
+      <div class="cmp-bar-wrap"><div class="cmp-bar" style="background:${ci.color};width:${pct}%"></div></div>
+      <span class="cmp-price">$${fmt(d.ef)}${isBest ? '<span class="cmp-tick">✓</span>' : ''}</span>
+    </div>`;
+  }).join('');
+
+  const nombre = p.nombre || p.name || 'Producto';
+  const meta = [p.marca, p.presentacion].filter(Boolean).join(' · ');
+
+  card.innerHTML = `
+    <div class="product-name">${nombre}</div>
+    ${meta ? `<div class="product-meta">${meta}</div>` : ''}
+    <div class="prices-row">${chips || '<span style="color:var(--muted);font-size:.8rem">Sin precios</span>'}</div>
+    ${sorted.length > 1 ? `
+      <div class="comparison" id="${uid}" style="display:none">
+        <div class="cmp-label">Comparación por cadena</div>
+        ${bars}
+      </div>
+    ` : ''}
+    <div class="card-footer">
+      ${sorted.length > 1
+        ? `<button class="expand-btn" onclick="toggleCmp('${uid}',this)">▼ ver comparación</button>`
+        : '<span></span>'}
+      <button class="track-btn ${isTracked?'active':''}"
+        onclick="toggleTrack('${esc(id)}','${esc(nombre)}','${esc(p.marca||'')}',${minEf},'${esc(sorted.length?getChain(sorted[0][0]).name:'')}',this,event)">
+        ${isTracked ? '✓ Siguiendo' : '+ Seguir'}
+      </button>
+    </div>
+  `;
+
+  return card;
+}
+
+function toggleCmp(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const vis = el.style.display !== 'none';
+  el.style.display = vis ? 'none' : 'block';
+  btn.textContent = vis ? '▼ ver comparación' : '▲ ocultar';
+}
+
+// ══════════════════════════════════════════════════
+// TRACKING
+// ══════════════════════════════════════════════════
+function toggleTrack(id, nombre, marca, minPrice, bestChain, btn, e) {
+  e.stopPropagation();
+  const idx = tracked.findIndex(t => t.id === id);
+  if (idx >= 0) {
+    tracked.splice(idx, 1);
+    btn.textContent = '+ Seguir';
+    btn.classList.remove('active');
+    btn.closest('.product-card').classList.remove('tracked');
+  } else {
+    tracked.push({ id, nombre, marca, minPrice, bestChain, addedAt: Date.now() });
+    btn.textContent = '✓ Siguiendo';
+    btn.classList.add('active');
+    btn.closest('.product-card').classList.add('tracked');
+  }
+  localStorage.setItem('pba_tracked', JSON.stringify(tracked));
+  renderTracked();
+}
+
+function removeTracked(i) {
+  tracked.splice(i, 1);
+  localStorage.setItem('pba_tracked', JSON.stringify(tracked));
+  renderTracked();
+}
+
+function renderTracked() {
+  const list  = document.getElementById('trackedList');
+  const count = document.getElementById('trackedCount');
+  count.textContent = tracked.length;
+
+  if (!tracked.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:16px 0">
+      <span class="empty-icon" style="font-size:1.4rem">📌</span>
+      Agregá productos<br>con el botón Seguir
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = tracked.map((t,i) => `
+    <div class="tracked-item">
+      <div class="tracked-info">
+        <div class="tracked-name">${t.nombre}</div>
+        <div class="tracked-sub">${t.bestChain ? 'Mejor: ' + t.bestChain : (t.marca || '')}</div>
+      </div>
+      ${t.minPrice ? `<div class="tracked-price">$${fmt(t.minPrice)}</div>` : ''}
+      <button class="remove-btn" onclick="removeTracked(${i})" title="Dejar de seguir">×</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════
+function fmt(n) { return Math.round(n||0).toLocaleString('es-AR'); }
+function esc(s) { return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+function updateTime() {
+  document.getElementById('lastUpdated').textContent =
+    'Actualizado: ' + new Date().toLocaleString('es-AR', { dateStyle:'short', timeStyle:'short' });
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') buscarProducto();
+});
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+renderTracked();
+updateTime();
+checkBackend();
+</script>
+</body>
+</html>
