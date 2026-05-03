@@ -31,6 +31,24 @@ const HEADERS = {
 
 const CADENAS_SUPER = ['COTO','JUMBO','CARREFOUR','DIA','WALMART','DISCO','VEA','LA ANONIMA','SUPER'];
 
+// Normalizar sucursal al formato que espera el frontend
+function normalizarSucursal(s) {
+  const precios = s.preciosProducto || {};
+  const precioLista = parseFloat(precios.precioLista) || 0;
+  const promo1 = parseFloat((precios.promo1 || {}).precio) || null;
+  const promo2 = parseFloat((precios.promo2 || {}).precio) || null;
+  const precioPromo = promo1 || promo2 || null;
+
+  return {
+    banderaDescripcion: s.banderaDescripcion || s.comercioRazonSocial || 'Otro',
+    sucursalNombre: s.sucursalNombre || '',
+    direccion: s.direccion || '',
+    precio: precioLista,
+    precioPromo1: precioPromo,
+    actualizadoHoy: s.actualizadoHoy || false,
+  };
+}
+
 // Búsqueda de productos
 app.get('/api/productos', async (req, res) => {
   const q = req.query.q || '';
@@ -51,12 +69,11 @@ app.get('/api/productos', async (req, res) => {
   }
 });
 
-// Precios de un producto — filtrando solo supermercados reales
+// Precios de un producto
 app.get('/api/producto/:id', async (req, res) => {
   const id = req.params.id;
 
   try {
-    // Obtener sucursales y filtrar solo supermercados
     const sucursales = await cached('sucursales_super', () =>
       axios.get('https://d3e6htiiul5ek9.cloudfront.net/prod/sucursales', {
         params: { lat: LAT, lng: LNG, limit: 100 },
@@ -71,14 +88,9 @@ app.get('/api/producto/:id', async (req, res) => {
       })
     );
 
-    console.log('Sucursales supermercados encontradas:', sucursales.length);
-
-    if (sucursales.length === 0) {
-      return res.json([]);
-    }
+    if (sucursales.length === 0) return res.json([]);
 
     const ids = sucursales.map(s => s.id).slice(0, 20).join(',');
-    console.log('IDs usados:', ids.slice(0, 80));
 
     const data = await cached('producto:' + id, () =>
       axios.get('https://d3e6htiiul5ek9.cloudfront.net/prod/producto', {
@@ -88,15 +100,18 @@ app.get('/api/producto/:id', async (req, res) => {
       }).then(r => r.data)
     );
 
-    console.log('Precios encontrados:', (data.sucursales || []).length);
-    res.json(data.sucursales || []);
+    const result = (data.sucursales || [])
+      .map(normalizarSucursal)
+      .filter(s => s.precio > 0);
+
+    res.json(result);
   } catch (e) {
     console.error('Error producto:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// Sucursales debug endpoint
+// Debug sucursales
 app.get('/api/sucursales', async (req, res) => {
   try {
     const r = await axios.get('https://d3e6htiiul5ek9.cloudfront.net/prod/sucursales', {
