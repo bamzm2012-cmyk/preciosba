@@ -508,6 +508,37 @@
   }
 
   footer a { color:var(--muted); text-decoration:underline; }
+
+  /* Quick search links */
+  .quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .quick-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: .67rem;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+    letter-spacing: .03em;
+  }
+
+  .quick-link:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+  .quick-link .ql-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
 </style>
 </head>
 <body>
@@ -606,7 +637,7 @@
 // ══════════════════════════════════════════════════
 // ⚙ CONFIGURACIÓN — cambiá esta URL cuando tengas el backend en Render
 // ══════════════════════════════════════════════════
-const BACKEND_URL = 'https://precios-backend.onrender.com'; // ← CAMBIÁ ESTO
+const BACKEND_URL = 'https://precios-backend.onrender.com';
 
 // ══════════════════════════════════════════════════
 // CHAINS
@@ -832,9 +863,29 @@ function buildCard(p, sucursales) {
         ${isTracked ? '✓ Siguiendo' : '+ Seguir'}
       </button>
     </div>
+    <div class="quick-links">
+      <span style="font-size:.63rem;color:var(--muted);align-self:center;letter-spacing:.05em">buscar en →</span>
+      ${quickLinks(nombre)}
+    </div>
   `;
 
   return card;
+}
+
+function quickLinks(q) {
+  const enc = encodeURIComponent(q);
+  const stores = [
+    { name: 'Jumbo', color: '#00a650', url: `https://www.jumbo.com.ar/${enc}?map=ft` },
+    { name: 'Coto', color: '#e8201a', url: `https://www.coto.com.ar/busqueda?q=${enc}` },
+    { name: 'Carrefour', color: '#003899', url: `https://www.carrefour.com.ar/busca/?ft=${enc}` },
+    { name: 'Disco', color: '#9b59b6', url: `https://www.disco.com.ar/${enc}?map=ft` },
+    { name: 'Vea', color: '#e67e22', url: `https://www.vea.com.ar/${enc}?map=ft` },
+  ];
+  return stores.map(s =>
+    `<a class="quick-link" href="${s.url}" target="_blank" rel="noopener">
+      <span class="ql-dot" style="background:${s.color}"></span>${s.name}
+    </a>`
+  ).join('');
 }
 
 function toggleCmp(id, btn) {
