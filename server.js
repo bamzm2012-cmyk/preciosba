@@ -5,8 +5,8 @@ const axios = require('axios');
 const app = express();
 app.use(cors());
 
-const LAT = -34.6037;
-const LNG = -58.3816;
+const LAT = -34.5885;
+const LNG = -58.4505;
 
 const cache = {};
 const CACHE_TTL = 6 * 60 * 60 * 1000;
